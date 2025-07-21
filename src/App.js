@@ -3,7 +3,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { BookUser, ChevronDown, PlusCircle, Edit, Trash2, LayoutDashboard, Users, ClipboardList, Calendar, DollarSign, Handshake, AlertCircle, TrendingUp, TrendingDown, MoreHorizontal, Search, FileText, ChevronLeft, ChevronRight, Activity, Percent, Target } from 'lucide-react';
 
 // --- DADOS MOCK (SIMULAÇÃO DE BANCO DE DADOS) ---
-// A constante `initialClients` foi removida. Os dados de clientes agora virão da API.
+// Apenas os dados que ainda não foram migrados para o backend permanecem aqui.
 
 const initialInteractions = [
     { id: 1, clientId: 1, date: '2025-07-26', type: 'Evolução', notes: 'Paciente relatou melhora significativa na dor lombar. Amplitude de movimento aumentada em 15 graus.' },
@@ -27,26 +27,11 @@ const initialProfessionals = [
 const initialAppointments = [
     { id: 1, clientId: 2, serviceId: 1, professionalId: 1, date: '2025-07-25T10:00:00', status: 'Realizado' },
     { id: 2, clientId: 1, serviceId: 2, professionalId: 2, date: '2025-07-25T11:00:00', status: 'Realizado' },
-    { id: 3, clientId: 4, serviceId: 1, professionalId: 1, date: '2025-07-26T14:00:00', status: 'Agendado' },
-    { id: 4, clientId: 1, serviceId: 1, professionalId: 1, date: '2025-06-15T09:00:00', status: 'Realizado' },
-    { id: 5, clientId: 3, serviceId: 3, professionalId: 2, date: '2025-06-22T16:00:00', status: 'Realizado' },
-    { id: 6, clientId: 2, serviceId: 1, professionalId: 1, date: '2025-08-05T10:00:00', status: 'Agendado' },
-    { id: 7, clientId: 5, serviceId: 4, professionalId: 2, date: '2025-07-22T15:00:00', status: 'Realizado' },
-    { id: 8, clientId: 2, serviceId: 1, professionalId: 1, date: '2025-07-18T10:00:00', status: 'Realizado' },
-    { id: 9, clientId: 1, serviceId: 1, professionalId: 1, date: '2025-07-11T09:00:00', status: 'Realizado' },
 ];
 
 const initialReceivables = [
     { id: 1, clientId: 1, description: 'Pilates Mensal (Julho)', value: 350.00, dueDate: '2025-07-10', status: 'Pago', paymentMethodId: 1 },
     { id: 2, clientId: 2, description: 'Sessão Fisioterapia', value: 150.00, dueDate: '2025-07-15', status: 'Pago', paymentMethodId: 2 },
-    { id: 3, clientId: 3, description: 'Sessão Fisioterapia', value: 150.00, dueDate: '2025-06-05', status: 'Vencido', paymentMethodId: null },
-    { id: 4, clientId: 4, description: 'Avaliação Postural', value: 200.00, dueDate: '2025-08-01', status: 'Aberto', paymentMethodId: null },
-    { id: 5, clientId: 1, description: 'Pilates Mensal (Agosto)', value: 350.00, dueDate: '2025-08-10', status: 'Aberto', paymentMethodId: null },
-    { id: 6, clientId: 1, description: 'Fisioterapia', value: 150.00, dueDate: '2025-06-15', status: 'Pago', paymentMethodId: 3 },
-    { id: 7, clientId: 3, description: 'Drenagem', value: 180.00, dueDate: '2025-06-22', status: 'Pago', paymentMethodId: 1 },
-    { id: 8, clientId: 5, description: 'Avaliação Postural', value: 200.00, dueDate: '2025-07-22', status: 'Pago', paymentMethodId: 3 },
-    { id: 9, clientId: 2, description: 'Sessão Fisioterapia', value: 150.00, dueDate: '2025-07-18', status: 'Pago', paymentMethodId: 2 },
-    { id: 10, clientId: 1, description: 'Sessão Fisioterapia', value: 150.00, dueDate: '2025-07-11', status: 'Pago', paymentMethodId: 1 },
 ];
 
 const initialChartOfAccounts = [
@@ -54,19 +39,11 @@ const initialChartOfAccounts = [
     { id: 2, name: 'Energia Elétrica' },
     { id: 3, name: 'Água e Esgoto' },
     { id: 4, name: 'Internet e Telefone' },
-    { id: 5, name: 'Salários e Pró-labore' },
-    { id: 6, name: 'Marketing e Publicidade' },
-    { id: 7, name: 'Material de Consumo' },
-    { id: 8, name: 'Manutenção e Reparos' },
 ];
 
 const initialPayables = [
     { id: 1, description: 'Aluguel do Espaço (Julho)', chartOfAccountId: 1, value: 2500.00, dueDate: '2025-07-05', status: 'Pago' },
     { id: 2, description: 'Conta de Luz', chartOfAccountId: 2, value: 450.00, dueDate: '2025-07-20', status: 'Pago' },
-    { id: 3, description: 'Plano de Internet Fibra', chartOfAccountId: 4, value: 120.00, dueDate: '2025-07-10', status: 'Pago' },
-    { id: 4, description: 'Aluguel do Espaço (Agosto)', chartOfAccountId: 1, value: 2500.00, dueDate: '2025-08-05', status: 'Aberto' },
-    { id: 5, description: 'Compra de Faixas Elásticas', chartOfAccountId: 7, value: 200.00, dueDate: '2025-07-15', status: 'Pago' },
-    { id: 6, description: 'Aluguel do Espaço (Junho)', chartOfAccountId: 1, value: 2500.00, dueDate: '2025-06-05', status: 'Pago' },
 ];
 
 const initialPaymentMethods = [
@@ -80,7 +57,6 @@ const initialPaymentMethods = [
 export default function App() {
     const [currentPage, setCurrentPage] = useState('Dashboard');
     
-    // ATUALIZAÇÃO: O estado de `clients` agora começa como um array vazio.
     const [clients, setClients] = useState([]); 
     const [services, setServices] = useState(initialServices);
     const [professionals, setProfessionals] = useState(initialProfessionals);
@@ -96,7 +72,6 @@ export default function App() {
             case 'Dashboard':
                 return <Dashboard clients={clients} receivables={receivables} payables={payables} />;
             case 'Clientes':
-                // O componente `Clients` agora gerencia sua própria busca de dados.
                 return <Clients clients={clients} setClients={setClients} />;
             case 'CRM':
                 return <CRM clients={clients} interactions={interactions} setInteractions={setInteractions} />;
@@ -187,21 +162,20 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
     );
 };
 
-// --- COMPONENTE CLIENTES (ATUALIZADO E CONECTADO AO BACKEND) ---
+// --- COMPONENTE CLIENTES (ATUALIZADO COM MODAL DE CRIAÇÃO) ---
 const Clients = ({ clients, setClients }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false); // NOVO: Estado para controlar o modal
 
     useEffect(() => {
         const fetchClients = async () => {
             try {
-                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pacientes`);
-
+                const response = await fetch('https://clinicflow-backend.onrender.com/api/pacientes');
                 if (!response.ok) {
                     throw new Error('Não foi possível buscar os dados. Verifique se o backend está no ar.');
                 }
-
                 const data = await response.json();
                 setClients(data);
             } catch (err) {
@@ -210,7 +184,6 @@ const Clients = ({ clients, setClients }) => {
                 setLoading(false);
             }
         };
-
         fetchClients();
     }, [setClients]);
 
@@ -219,19 +192,18 @@ const Clients = ({ clients, setClients }) => {
         (client.cpf && client.cpf.includes(searchTerm))
     );
 
-    if (loading) {
-        return <div className="text-center p-8">Conectando ao servidor e carregando pacientes...</div>;
-    }
-
-    if (error) {
-        return <div className="text-center p-8 text-red-600">Erro ao conectar com o servidor: {error}</div>;
-    }
+    if (loading) return <div className="text-center p-8">Conectando ao servidor e carregando pacientes...</div>;
+    if (error) return <div className="text-center p-8 text-red-600">Erro ao conectar com o servidor: {error}</div>;
 
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-bold text-gray-800">Clientes</h2>
-                <button className="flex items-center bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition-colors">
+                {/* NOVO: onClick para abrir o modal */}
+                <button 
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition-colors"
+                >
                     <PlusCircle className="h-5 w-5 mr-2" />
                     Novo Cliente
                 </button>
@@ -271,9 +243,99 @@ const Clients = ({ clients, setClients }) => {
                     </tbody>
                 </table>
             </div>
+            {/* NOVO: Renderização condicional do modal */}
+            {isModalOpen && <NewClientModal 
+                closeModal={() => setIsModalOpen(false)}
+                setClients={setClients}
+            />}
         </div>
     );
 };
+
+// --- NOVO COMPONENTE: MODAL PARA CRIAR CLIENTE ---
+const NewClientModal = ({ closeModal, setClients }) => {
+    const [formData, setFormData] = useState({
+        nome: '',
+        cpf: '',
+        email: '',
+        telefone: ''
+    });
+    const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setIsSubmitting(true);
+
+        try {
+            const response = await fetch('https://clinicflow-backend.onrender.com/api/pacientes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.mensagem || 'Falha ao criar cliente.');
+            }
+
+            const { paciente: novoPaciente } = await response.json();
+            
+            // Atualiza a lista de clientes no componente pai
+            setClients(prevClients => [...prevClients, novoPaciente].sort((a,b) => a.nome.localeCompare(b.nome)));
+            
+            closeModal(); // Fecha o modal em caso de sucesso
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">Novo Cliente</h3>
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                            <input type="text" name="nome" value={formData.nome} onChange={handleChange} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                            <input type="text" name="cpf" value={formData.cpf} onChange={handleChange} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                            <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                            <input type="tel" name="telefone" value={formData.telefone} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                        </div>
+                    </div>
+                    {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
+                    <div className="mt-8 flex justify-end space-x-4">
+                        <button type="button" onClick={closeModal} disabled={isSubmitting} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 disabled:opacity-50">Cancelar</button>
+                        <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400">
+                            {isSubmitting ? 'Salvando...' : 'Salvar Cliente'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 
 // --- DEMAIS PÁGINAS E COMPONENTES (SEM ALTERAÇÕES) ---
 const CRM = ({ clients, interactions, setInteractions }) => {
@@ -929,7 +991,7 @@ const Dashboard = ({ clients, receivables, payables }) => {
                             {churnClients.length > 0 ? churnClients.map(c => (
                                 <div key={c.id} className="flex justify-between items-center text-sm">
                                     <p className="font-medium text-gray-600">{c.nome}</p>
-                                    <p className="text-gray-500">Última visita: {new Date(c.lastVisit).toLocaleDateString('pt-BR')}</p>
+                                    <p className="text-gray-500">Última visita: {c.lastVisit ? new Date(c.lastVisit).toLocaleDateString('pt-BR') : 'N/A'}</p>
                                 </div>
                             )) : <p className="text-sm text-gray-500">Nenhum cliente em risco de evasão.</p>}
                         </div>
