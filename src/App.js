@@ -1,26 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { BookUser, ChevronDown, PlusCircle, Edit, Trash2, LayoutDashboard, Users, ClipboardList, Calendar, DollarSign, Handshake, AlertCircle, TrendingUp, TrendingDown, MoreHorizontal, Search, FileText, ChevronLeft, ChevronRight, Activity, Percent, Target, CheckCircle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, LayoutDashboard, Users, ClipboardList, Handshake, Search, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// --- DADOS MOCK (APENAS PARA MÓDULOS AINDA NÃO CONECTADOS AO BACKEND) ---
-const initialInteractions = [
-    { id: 1, clientId: 1, date: '2025-07-26', type: 'Evolução', notes: 'Paciente relatou melhora significativa na dor lombar.' },
-];
+
+// --- DADOS MOCK (APENAS PARA O DASHBOARD, ATÉ O FINANCEIRO SER RECONSTRUÍDO) ---
 const initialReceivables = [
-    { id: 1, clientId: 1, description: 'Pilates Mensal (Julho)', value: 350.00, dueDate: '2025-07-10', status: 'Pago', paymentMethodId: 1 },
-    { id: 2, clientId: 2, description: 'Sessão Fisioterapia', value: 150.00, dueDate: '2025-07-15', status: 'Pago', paymentMethodId: 2 },
-    { id: 3, clientId: 3, description: 'Sessão Fisioterapia', value: 150.00, dueDate: '2025-06-05', status: 'Vencido', paymentMethodId: null },
-];
-const initialChartOfAccounts = [
-    { id: 1, name: 'Aluguel' }, { id: 2, name: 'Energia Elétrica' },
+    { id: 1, clientId: 1, description: 'Pilates Mensal (Julho)', value: 350.00, dueDate: '2025-07-10', status: 'Pago' },
+    { id: 2, clientId: 2, description: 'Sessão Fisioterapia', value: 150.00, dueDate: '2025-07-15', status: 'Pago' },
+    { id: 3, clientId: 3, description: 'Sessão Fisioterapia', value: 150.00, dueDate: '2025-06-05', status: 'Vencido' },
 ];
 const initialPayables = [
-    { id: 1, description: 'Aluguel do Espaço (Julho)', chartOfAccountId: 1, value: 2500.00, dueDate: '2025-07-05', status: 'Pago' },
-    { id: 2, description: 'Aluguel do Espaço (Junho)', chartOfAccountId: 1, value: 2500.00, dueDate: '2025-06-05', status: 'Pago' },
+    { id: 1, description: 'Aluguel do Espaço (Julho)', value: 2500.00, dueDate: '2025-07-05', status: 'Pago' },
+    { id: 2, description: 'Aluguel do Espaço (Junho)', value: 2500.00, dueDate: '2025-06-05', status: 'Pago' },
 ];
-const initialPaymentMethods = [
-    { id: 1, name: 'Crédito (1x)', fee: 2.99 }, { id: 2, name: 'Débito', fee: 1.49 }, { id: 3, name: 'PIX', fee: 0 }, { id: 4, name: 'Dinheiro', fee: 0 },
-];
+
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const maskCPF = v => v.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').substring(0, 14);
@@ -31,7 +24,10 @@ const maskCEP = v => v.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').substr
 
 const Sidebar = ({ currentPage, setCurrentPage }) => {
     const navItems = [
-        { name: 'Dashboard', icon: LayoutDashboard }, { name: 'CRM', icon: BookUser }, { name: 'Clientes', icon: Users }, { name: 'Serviços', icon: ClipboardList }, { name: 'Profissionais', icon: Handshake }, { name: 'Agenda', icon: Calendar }, { name: 'Financeiro', icon: DollarSign }, { name: 'Relatórios', icon: FileText },
+        { name: 'Dashboard', icon: LayoutDashboard },
+        { name: 'Clientes', icon: Users },
+        { name: 'Serviços', icon: ClipboardList },
+        { name: 'Profissionais', icon: Handshake },
     ];
     return (
         <aside className="w-64 bg-white text-gray-800 flex flex-col shadow-lg">
@@ -44,26 +40,11 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
 
 const Dashboard = ({ clients, receivables, payables }) => {
     const today = new Date();
-    const churnDaysThreshold = 60;
-
     const stats = useMemo(() => {
         const monthlyRevenue = (receivables || []).filter(r => { const d = new Date(r.dueDate); return r.status === 'Pago' && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear(); }).reduce((sum, r) => sum + r.value, 0);
         const overdueReceivables = (receivables || []).filter(r => r.status === 'Vencido');
         return { totalClients: (clients || []).length, monthlyRevenue, overdueCount: overdueReceivables.length, overdueAmount: overdueReceivables.reduce((sum, r) => sum + r.value, 0) };
     }, [clients, receivables, today]);
-
-    const revenueData = useMemo(() => {
-        const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setMonth(d.getMonth() - i); return { name: d.toLocaleString('pt-BR', { month: 'short' }).toUpperCase(), Faturamento: 0 }; }).reverse();
-        (receivables || []).forEach(r => {
-            if (r.status === 'Pago') {
-                const date = new Date(r.dueDate);
-                const monthStr = date.toLocaleString('pt-BR', { month: 'short' }).toUpperCase();
-                const monthData = months.find(m => m.name === monthStr);
-                if (monthData) monthData.Faturamento += r.value;
-            }
-        });
-        return months;
-    }, [receivables]);
 
     const comparisonData = useMemo(() => {
         const data = {};
@@ -77,13 +58,6 @@ const Dashboard = ({ clients, receivables, payables }) => {
         (payables || []).forEach(p => addData(p.dueDate, p.value, 'Despesas'));
         return Object.values(data).sort((a,b) => new Date(a.name) - new Date(b.name)).slice(-6);
     }, [receivables, payables]);
-
-    const overdueClients = useMemo(() => (receivables || []).filter(r => r.status === 'Vencido').map(r => ({ ...r, clientName: (clients || []).find(c => c.id === r.clientId)?.nome || 'N/A' })), [receivables, clients]);
-    const churnClients = useMemo(() => {
-        const churnDate = new Date();
-        churnDate.setDate(churnDate.getDate() - churnDaysThreshold);
-        return (clients || []).filter(c => c.data_ultima_visita && new Date(c.data_ultima_visita) < churnDate);
-    }, [clients]);
 
     const StatCard = ({ title, value, icon, colorClass }) => (
         <div className="bg-white p-6 rounded-xl shadow-md flex items-center justify-between">
@@ -101,21 +75,9 @@ const Dashboard = ({ clients, receivables, payables }) => {
                 <StatCard title="Inadimplentes" value={stats.overdueCount} icon={<AlertCircle className="text-white"/>} colorClass="bg-yellow-500" />
                 <StatCard title="Valor Vencido" value={`R$ ${stats.overdueAmount.toFixed(2)}`} icon={<TrendingDown className="text-white"/>} colorClass="bg-red-500" />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white p-6 rounded-xl shadow-md">
-                        <h3 className="text-lg font-semibold text-gray-700 mb-4">Faturamento dos Últimos 6 Meses</h3>
-                        <ResponsiveContainer width="100%" height={300}><LineChart data={revenueData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis tickFormatter={v => `R$${v}`} /><Tooltip formatter={v => `R$ ${v.toFixed(2)}`} /><Legend /><Line type="monotone" dataKey="Faturamento" stroke="#4f46e5" strokeWidth={2} activeDot={{ r: 8 }} /></LineChart></ResponsiveContainer>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-md">
-                        <h3 className="text-lg font-semibold text-gray-700 mb-4">Comparativo: Receitas vs. Despesas</h3>
-                        <ResponsiveContainer width="100%" height={300}><BarChart data={comparisonData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis tickFormatter={v => `R$${v}`} /><Tooltip formatter={v => `R$ ${v.toFixed(2)}`} /><Legend /><Bar dataKey="Receitas" fill="#22c55e" name="Receitas" /><Bar dataKey="Despesas" fill="#ef4444" name="Despesas" /></BarChart></ResponsiveContainer>
-                    </div>
-                </div>
-                <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-xl shadow-md"><h3 className="text-lg font-semibold text-gray-700 mb-4">Clientes Inadimplentes</h3><div className="space-y-3 max-h-60 overflow-y-auto">{overdueClients.length > 0 ? overdueClients.map(r => (<div key={r.id} className="flex justify-between items-center text-sm"><p className="font-medium text-gray-600">{r.clientName}</p><p className="font-bold text-red-600">R$ {r.value.toFixed(2)}</p></div>)) : <p className="text-sm text-gray-500">Nenhum cliente inadimplente.</p>}</div></div>
-                    <div className="bg-white p-6 rounded-xl shadow-md"><h3 className="text-lg font-semibold text-gray-700 mb-4">Alerta de Evasão ({churnDaysThreshold} dias)</h3><div className="space-y-3 max-h-60 overflow-y-auto">{churnClients.length > 0 ? churnClients.map(c => (<div key={c.id} className="flex justify-between items-center text-sm"><p className="font-medium text-gray-600">{c.nome}</p><p className="text-gray-500">Última visita: {new Date(c.data_ultima_visita).toLocaleDateString('pt-BR')}</p></div>)) : <p className="text-sm text-gray-500">Nenhum cliente em risco de evasão.</p>}</div></div>
-                </div>
+             <div className="bg-white p-6 rounded-xl shadow-md mt-6">
+                <h3 className="text-lg font-semibold text-gray-700 mb-4">Comparativo: Receitas vs. Despesas</h3>
+                <ResponsiveContainer width="100%" height={300}><BarChart data={comparisonData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis tickFormatter={v => `R$${v}`} /><Tooltip formatter={v => `R$ ${v.toFixed(2)}`} /><Legend /><Bar dataKey="Receitas" fill="#22c55e" name="Receitas" /><Bar dataKey="Despesas" fill="#ef4444" name="Despesas" /></BarChart></ResponsiveContainer>
             </div>
         </div>
     );
@@ -311,53 +273,50 @@ const ProfessionalFormModal = ({ closeModal, setProfessionals, professionalToEdi
     );
 };
 
-const Agenda = ({ appointments, clients, services }) => {
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const changeMonth = (offset) => setCurrentDate(prev => { const newDate = new Date(prev); newDate.setMonth(newDate.getMonth() + offset); return newDate; });
-    const calendarGrid = useMemo(() => {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        const firstDayOfMonth = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const grid = [];
-        let day = 1;
-        for (let i = 0; i < 6; i++) {
-            const week = [];
-            for (let j = 0; j < 7; j++) {
-                if ((i === 0 && j < firstDayOfMonth) || day > daysInMonth) { week.push(null); } 
-                else {
-                    const dayAppointments = (appointments || []).filter(app => { const appDate = new Date(app.data_hora); return appDate.getDate() === day && appDate.getMonth() === month && appDate.getFullYear() === year; });
-                    week.push({ day, date: new Date(year, month, day), appointments: dayAppointments });
-                    day++;
+// --- COMPONENTE PRINCIPAL ---
+export default function App() {
+    const [currentPage, setCurrentPage] = useState('Clientes');
+    
+    const [clients, setClients] = useState([]); 
+    const [services, setServices] = useState([]);
+    const [professionals, setProfessionals] = useState([]);
+    
+    const [receivables, setReceivables] = useState(initialReceivables);
+    const [payables, setPayables] = useState(initialPayables);
+
+    useEffect(() => {
+        const fetchData = async (endpoint, setter) => {
+            try {
+                const response = await fetch(`https://clinicflow-backend.onrender.com/api/${endpoint}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setter(data);
+                } else {
+                     console.error(`Falha ao buscar ${endpoint}: Status ${response.status}`);
                 }
+            } catch (error) {
+                console.error(`Falha ao buscar ${endpoint}:`, error);
             }
-            grid.push(week);
-            if (day > daysInMonth) break;
+        };
+        fetchData('pacientes', setClients);
+        fetchData('servicos', setServices);
+        fetchData('profissionais', setProfessionals);
+    }, []);
+
+    const renderPage = () => {
+        switch (currentPage) {
+            case 'Dashboard': return <Dashboard clients={clients} receivables={receivables} payables={payables} />;
+            case 'Clientes': return <Clients clients={clients} setClients={setClients} />;
+            case 'Serviços': return <Services services={services} setServices={setServices} />;
+            case 'Profissionais': return <Professionals professionals={professionals} setProfessionals={setProfessionals} />;
+            default: return <Clients clients={clients} setClients={setClients} />;
         }
-        return grid;
-    }, [currentDate, appointments]);
+    };
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-gray-800">Agenda</h2>
-                <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2"><button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-200"><ChevronLeft /></button><span className="text-xl font-semibold text-gray-700 w-48 text-center capitalize">{currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</span><button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-200"><ChevronRight /></button></div>
-                    <button className="flex items-center bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700"><PlusCircle className="h-5 w-5 mr-2" />Novo Agendamento</button>
-                </div>
-            </div>
-            <div className="bg-white rounded-xl shadow-md">
-                <div className="grid grid-cols-7 text-center font-semibold text-gray-600 border-b">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => <div key={day} className="p-4">{day}</div>)}</div>
-                <div className="grid grid-cols-7 grid-rows-6">{calendarGrid.flat().map((dayData, index) => (<div key={index} className="h-40 border-r border-b p-2 overflow-y-auto">{dayData && (<><span className="font-bold">{dayData.day}</span><div className="mt-1 space-y-1">{dayData.appointments.map(app => (<div key={app.id} className="bg-indigo-100 text-indigo-800 p-1 rounded-md text-xs"><p className="font-semibold truncate">{(clients || []).find(c => c.id === app.id_paciente)?.nome}</p><p className="truncate">{(services || []).find(s => s.id === app.id_servico)?.nome}</p><p>{new Date(app.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p></div>))}</div></>)}</div>))}</div>
-            </div>
+        <div className="flex h-screen bg-gray-100 font-sans">
+            <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+            <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">{renderPage()}</main>
         </div>
     );
-};
-
-const Reports = ({ receivables, payables, appointments, services, professionals, clients }) => {
-    return <div className="text-center p-8">Módulo de Relatórios em desenvolvimento.</div>
-};
-
-const CRM = ({ clients, interactions, setInteractions }) => {
-    return <div className="text-center p-8">Módulo de CRM em desenvolvimento.</div>
-};
+}
