@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { PlusCircle, Edit, Trash2, LayoutDashboard, Users, ClipboardList, Handshake, Search, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, LayoutDashboard, Users, ClipboardList, Handshake, Search, Calendar, AlertCircle, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
 
 // --- DADOS MOCK (APENAS PARA O DASHBOARD, ATÉ O FINANCEIRO SER RECONSTRUÍDO) ---
 const initialReceivables = [
@@ -12,6 +11,9 @@ const initialReceivables = [
 const initialPayables = [
     { id: 1, description: 'Aluguel do Espaço (Julho)', value: 2500.00, dueDate: '2025-07-05', status: 'Pago' },
     { id: 2, description: 'Aluguel do Espaço (Junho)', value: 2500.00, dueDate: '2025-06-05', status: 'Pago' },
+];
+const initialPaymentMethods = [
+    { id: 1, name: 'Crédito (1x)', fee: 2.99 }, { id: 2, name: 'Débito', fee: 1.49 }, { id: 3, name: 'PIX', fee: 0 }, { id: 4, name: 'Dinheiro', fee: 0 },
 ];
 
 
@@ -25,6 +27,7 @@ const maskCEP = v => v.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').substr
 const Sidebar = ({ currentPage, setCurrentPage }) => {
     const navItems = [
         { name: 'Dashboard', icon: LayoutDashboard },
+        { name: 'Agenda', icon: Calendar },
         { name: 'Clientes', icon: Users },
         { name: 'Serviços', icon: ClipboardList },
         { name: 'Profissionais', icon: Handshake },
@@ -273,6 +276,49 @@ const ProfessionalFormModal = ({ closeModal, setProfessionals, professionalToEdi
     );
 };
 
+const Agenda = ({ appointments, clients, services }) => {
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const changeMonth = (offset) => setCurrentDate(prev => { const newDate = new Date(prev); newDate.setMonth(newDate.getMonth() + offset); return newDate; });
+    const calendarGrid = useMemo(() => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const grid = [];
+        let day = 1;
+        for (let i = 0; i < 6; i++) {
+            const week = [];
+            for (let j = 0; j < 7; j++) {
+                if ((i === 0 && j < firstDayOfMonth) || day > daysInMonth) { week.push(null); } 
+                else {
+                    const dayAppointments = (appointments || []).filter(app => { const appDate = new Date(app.data_hora_inicio); return appDate.getDate() === day && appDate.getMonth() === month && appDate.getFullYear() === year; });
+                    week.push({ day, date: new Date(year, month, day), appointments: dayAppointments });
+                    day++;
+                }
+            }
+            grid.push(week);
+            if (day > daysInMonth) break;
+        }
+        return grid;
+    }, [currentDate, appointments]);
+
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-gray-800">Agenda</h2>
+                <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2"><button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-200"><ChevronLeft /></button><span className="text-xl font-semibold text-gray-700 w-48 text-center capitalize">{currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</span><button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-200"><ChevronRight /></button></div>
+                    <button className="flex items-center bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700"><PlusCircle className="h-5 w-5 mr-2" />Novo Agendamento</button>
+                </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-md">
+                <div className="grid grid-cols-7 text-center font-semibold text-gray-600 border-b">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => <div key={day} className="p-4">{day}</div>)}</div>
+                <div className="grid grid-cols-7" style={{ minHeight: '60vh' }}>{calendarGrid.flat().map((dayData, index) => (<div key={index} className="border-r border-b p-2 overflow-y-auto">{dayData && (<><span className="font-bold">{dayData.day}</span><div className="mt-1 space-y-1">{dayData.appointments.map(app => (<div key={app.id} className="bg-indigo-100 text-indigo-800 p-1 rounded-md text-xs cursor-pointer hover:bg-indigo-200"><p className="font-semibold truncate">{(services || []).find(s => s.id === app.id_servico)?.nome}</p><p>{new Date(app.data_hora_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p><p className="truncate">{(app.participantes || []).map(p => p.nome).join(', ')}</p></div>))}</div></>)}</div>))}</div>
+            </div>
+        </div>
+    );
+};
+
 // --- COMPONENTE PRINCIPAL ---
 export default function App() {
     const [currentPage, setCurrentPage] = useState('Clientes');
@@ -280,6 +326,7 @@ export default function App() {
     const [clients, setClients] = useState([]); 
     const [services, setServices] = useState([]);
     const [professionals, setProfessionals] = useState([]);
+    const [appointments, setAppointments] = useState([]);
     
     const [receivables, setReceivables] = useState(initialReceivables);
     const [payables, setPayables] = useState(initialPayables);
@@ -301,6 +348,7 @@ export default function App() {
         fetchData('pacientes', setClients);
         fetchData('servicos', setServices);
         fetchData('profissionais', setProfessionals);
+        fetchData('agendamentos', setAppointments);
     }, []);
 
     const renderPage = () => {
@@ -309,6 +357,7 @@ export default function App() {
             case 'Clientes': return <Clients clients={clients} setClients={setClients} />;
             case 'Serviços': return <Services services={services} setServices={setServices} />;
             case 'Profissionais': return <Professionals professionals={professionals} setProfessionals={setProfessionals} />;
+            case 'Agenda': return <Agenda appointments={appointments} clients={clients} services={services} />;
             default: return <Clients clients={clients} setClients={setClients} />;
         }
     };
