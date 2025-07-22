@@ -12,13 +12,6 @@ const initialInteractions = [
     { id: 4, clientId: 2, date: '2025-07-15', type: 'Contato Telefônico', notes: 'Paciente ligou para reagendar a sessão do dia 16 para o dia 18.' },
 ];
 
-const initialServices = [
-    { id: 1, name: 'Sessão de Fisioterapia', price: 150.00, duration: 50 },
-    { id: 2, name: 'Pilates Mensal', price: 350.00, duration: 50 },
-    { id: 3, name: 'Drenagem Linfática', price: 180.00, duration: 60 },
-    { id: 4, name: 'Avaliação Postural', price: 200.00, duration: 60 },
-];
-
 const initialProfessionals = [
     { id: 1, name: 'Dra. Helena Borges', commission: 40 },
     { id: 2, name: 'Dr. Ricardo Lima', commission: 45 },
@@ -58,7 +51,7 @@ export default function App() {
     const [currentPage, setCurrentPage] = useState('Dashboard');
     
     const [clients, setClients] = useState([]); 
-    const [services, setServices] = useState(initialServices);
+    const [services, setServices] = useState([]);
     const [professionals, setProfessionals] = useState(initialProfessionals);
     const [appointments, setAppointments] = useState(initialAppointments);
     const [receivables, setReceivables] = useState(initialReceivables);
@@ -162,20 +155,38 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
     );
 };
 
-// --- COMPONENTE CLIENTES (ATUALIZADO COM MODAL DE CRIAÇÃO) ---
+// --- FUNÇÕES UTILITÁRIAS PARA MÁSCARAS ---
+const maskCPF = value => {
+  return value
+    .replace(/\D/g, '')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+    .substring(0, 14)
+}
+
+const maskPhone = value => {
+  return value
+    .replace(/\D/g, '')
+    .replace(/(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d)/, '$1-$2')
+    .substring(0, 15)
+}
+
+
+// --- COMPONENTE CLIENTES (CRUD COMPLETO) ---
 const Clients = ({ clients, setClients }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false); // NOVO: Estado para controlar o modal
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [editingClient, setEditingClient] = useState(null);
 
     useEffect(() => {
         const fetchClients = async () => {
             try {
                 const response = await fetch('https://clinicflow-backend.onrender.com/api/pacientes');
-                if (!response.ok) {
-                    throw new Error('Não foi possível buscar os dados. Verifique se o backend está no ar.');
-                }
+                if (!response.ok) throw new Error('Não foi possível buscar os dados. Verifique se o backend está no ar.');
                 const data = await response.json();
                 setClients(data);
             } catch (err) {
@@ -186,6 +197,25 @@ const Clients = ({ clients, setClients }) => {
         };
         fetchClients();
     }, [setClients]);
+    
+    const handleDelete = async (clientId) => {
+        if (!window.confirm('Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+        try {
+            const response = await fetch(`https://clinicflow-backend.onrender.com/api/pacientes/${clientId}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error('Falha ao excluir o cliente.');
+            setClients(prevClients => prevClients.filter(c => c.id !== clientId));
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const handleEdit = (client) => {
+        setEditingClient(client);
+    };
 
     const filteredClients = clients.filter(client =>
         (client.nome && client.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -199,9 +229,8 @@ const Clients = ({ clients, setClients }) => {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-bold text-gray-800">Clientes</h2>
-                {/* NOVO: onClick para abrir o modal */}
                 <button 
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => setIsCreateModalOpen(true)}
                     className="flex items-center bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition-colors"
                 >
                     <PlusCircle className="h-5 w-5 mr-2" />
@@ -235,30 +264,217 @@ const Clients = ({ clients, setClients }) => {
                                 <td className="p-4 text-gray-600">{client.cpf}</td>
                                 <td className="p-4 text-gray-600">{client.email}<br/>{client.telefone}</td>
                                 <td className="p-4">
-                                    <button className="text-indigo-600 hover:text-indigo-800 mr-2"><Edit size={18} /></button>
-                                    <button className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button>
+                                    <button onClick={() => handleEdit(client)} className="text-indigo-600 hover:text-indigo-800 mr-2"><Edit size={18} /></button>
+                                    <button onClick={() => handleDelete(client.id)} className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-            {/* NOVO: Renderização condicional do modal */}
-            {isModalOpen && <NewClientModal 
-                closeModal={() => setIsModalOpen(false)}
+            {isCreateModalOpen && <ClientFormModal 
+                closeModal={() => setIsCreateModalOpen(false)}
+                setClients={setClients}
+            />}
+            {editingClient && <ClientFormModal 
+                clientToEdit={editingClient}
+                closeModal={() => setEditingClient(null)}
                 setClients={setClients}
             />}
         </div>
     );
 };
 
-// --- NOVO COMPONENTE: MODAL PARA CRIAR CLIENTE ---
-const NewClientModal = ({ closeModal, setClients }) => {
+const ClientFormModal = ({ closeModal, setClients, clientToEdit = null }) => {
+    const [formData, setFormData] = useState({
+        nome: clientToEdit?.nome || '',
+        cpf: clientToEdit?.cpf || '',
+        email: clientToEdit?.email || '',
+        telefone: clientToEdit?.telefone || ''
+    });
+    const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const isEditing = !!clientToEdit;
+
+    const handleChange = (e) => {
+        let { name, value } = e.target;
+        if (name === 'cpf') value = maskCPF(value);
+        if (name === 'telefone') value = maskPhone(value);
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setIsSubmitting(true);
+
+        const url = isEditing 
+            ? `https://clinicflow-backend.onrender.com/api/pacientes/${clientToEdit.id}`
+            : 'https://clinicflow-backend.onrender.com/api/pacientes';
+        
+        const method = isEditing ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.mensagem || `Falha ao ${isEditing ? 'atualizar' : 'criar'} cliente.`);
+            }
+
+            const { paciente: resultClient } = await response.json();
+            
+            if (isEditing) {
+                setClients(prev => prev.map(c => c.id === resultClient.id ? resultClient : c));
+            } else {
+                setClients(prev => [...prev, resultClient].sort((a,b) => a.nome.localeCompare(b.nome)));
+            }
+            
+            closeModal();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">{isEditing ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                            <input type="text" name="nome" value={formData.nome} onChange={handleChange} required className="w-full p-2 border rounded-lg" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                            <input type="text" name="cpf" value={formData.cpf} onChange={handleChange} required className="w-full p-2 border rounded-lg" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                            <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-2 border rounded-lg" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                            <input type="tel" name="telefone" value={formData.telefone} onChange={handleChange} className="w-full p-2 border rounded-lg" />
+                        </div>
+                    </div>
+                    {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
+                    <div className="mt-8 flex justify-end space-x-4">
+                        <button type="button" onClick={closeModal} disabled={isSubmitting} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancelar</button>
+                        <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                            {isSubmitting ? 'Salvando...' : 'Salvar'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+
+// --- COMPONENTE SERVIÇOS (CRUD COMPLETO) ---
+const Services = ({ services, setServices }) => {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    useEffect(() => {
+        const fetchServices = async () => {
+            try {
+                const response = await fetch('https://clinicflow-backend.onrender.com/api/servicos');
+                if (!response.ok) {
+                    throw new Error('Falha ao buscar serviços. Verifique o backend.');
+                }
+                const data = await response.json();
+                setServices(data);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchServices();
+    }, [setServices]);
+
+    const handleDelete = async (serviceId) => {
+        if (!window.confirm('Tem certeza que deseja excluir este serviço?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`https://clinicflow-backend.onrender.com/api/servicos/${serviceId}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao excluir o serviço.');
+            }
+            setServices(prevServices => prevServices.filter(s => s.id !== serviceId));
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    if (loading) return <div className="text-center p-8">Carregando serviços...</div>;
+    if (error) return <div className="text-center p-8 text-red-600">Erro: {error}</div>;
+
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-gray-800">Serviços</h2>
+                <button 
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition-colors"
+                >
+                    <PlusCircle className="h-5 w-5 mr-2" />
+                    Novo Serviço
+                </button>
+            </div>
+            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <table className="w-full text-left">
+                    <thead className="bg-gray-50 border-b">
+                        <tr>
+                            <th className="p-4 font-semibold text-gray-600">Nome do Serviço</th>
+                            <th className="p-4 font-semibold text-gray-600">Preço</th>
+                            <th className="p-4 font-semibold text-gray-600">Duração (min)</th>
+                            <th className="p-4 font-semibold text-gray-600">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {services.map(service => (
+                            <tr key={service.id} className="border-b hover:bg-gray-50">
+                                <td className="p-4 font-medium text-gray-800">{service.nome}</td>
+                                <td className="p-4 text-gray-600">R$ {parseFloat(service.preco).toFixed(2)}</td>
+                                <td className="p-4 text-gray-600">{service.duracao_minutos}</td>
+                                <td className="p-4">
+                                    <button className="text-indigo-600 hover:text-indigo-800 mr-2"><Edit size={18} /></button>
+                                    <button onClick={() => handleDelete(service.id)} className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {isModalOpen && <NewServiceModal 
+                closeModal={() => setIsModalOpen(false)}
+                setServices={setServices}
+            />}
+        </div>
+    );
+};
+
+const NewServiceModal = ({ closeModal, setServices }) => {
     const [formData, setFormData] = useState({
         nome: '',
-        cpf: '',
-        email: '',
-        telefone: ''
+        preco: '',
+        duracao_minutos: ''
     });
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -274,25 +490,24 @@ const NewClientModal = ({ closeModal, setClients }) => {
         setIsSubmitting(true);
 
         try {
-            const response = await fetch('https://clinicflow-backend.onrender.com/api/pacientes', {
+            const response = await fetch('https://clinicflow-backend.onrender.com/api/servicos', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...formData,
+                    preco: parseFloat(formData.preco),
+                    duracao_minutos: parseInt(formData.duracao_minutos)
+                }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.mensagem || 'Falha ao criar cliente.');
+                throw new Error(errorData.mensagem || 'Falha ao criar serviço.');
             }
 
-            const { paciente: novoPaciente } = await response.json();
-            
-            // Atualiza a lista de clientes no componente pai
-            setClients(prevClients => [...prevClients, novoPaciente].sort((a,b) => a.nome.localeCompare(b.nome)));
-            
-            closeModal(); // Fecha o modal em caso de sucesso
+            const { servico: novoServico } = await response.json();
+            setServices(prev => [...prev, novoServico].sort((a,b) => a.nome.localeCompare(b.nome)));
+            closeModal();
         } catch (err) {
             setError(err.message);
         } finally {
@@ -303,31 +518,27 @@ const NewClientModal = ({ closeModal, setClients }) => {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
-                <h3 className="text-2xl font-bold text-gray-800 mb-6">Novo Cliente</h3>
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">Novo Serviço</h3>
                 <form onSubmit={handleSubmit}>
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
-                            <input type="text" name="nome" value={formData.nome} onChange={handleChange} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Serviço</label>
+                            <input type="text" name="nome" value={formData.nome} onChange={handleChange} required className="w-full p-2 border rounded-lg" />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
-                            <input type="text" name="cpf" value={formData.cpf} onChange={handleChange} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Preço (R$)</label>
+                            <input type="number" name="preco" step="0.01" value={formData.preco} onChange={handleChange} required className="w-full p-2 border rounded-lg" />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-                            <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
-                            <input type="tel" name="telefone" value={formData.telefone} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Duração (em minutos)</label>
+                            <input type="number" name="duracao_minutos" value={formData.duracao_minutos} onChange={handleChange} required className="w-full p-2 border rounded-lg" />
                         </div>
                     </div>
                     {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
                     <div className="mt-8 flex justify-end space-x-4">
-                        <button type="button" onClick={closeModal} disabled={isSubmitting} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 disabled:opacity-50">Cancelar</button>
-                        <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400">
-                            {isSubmitting ? 'Salvando...' : 'Salvar Cliente'}
+                        <button type="button" onClick={closeModal} disabled={isSubmitting} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancelar</button>
+                        <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                            {isSubmitting ? 'Salvando...' : 'Salvar Serviço'}
                         </button>
                     </div>
                 </form>
@@ -336,8 +547,7 @@ const NewClientModal = ({ closeModal, setClients }) => {
     );
 };
 
-
-// --- DEMAIS PÁGINAS E COMPONENTES (SEM ALTERAÇÕES) ---
+// ... O restante dos componentes (CRM, Reports, Dashboard, etc.) permanece o mesmo
 const CRM = ({ clients, interactions, setInteractions }) => {
     const [selectedClientId, setSelectedClientId] = useState(clients[0]?.id || null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -576,7 +786,7 @@ const KeyIndicatorsView = ({ appointments, professionals, receivables, payables,
             .reduce((sum, a) => {
                 const service = services.find(s => s.id === a.serviceId);
                 const professional = professionals.find(p => p.id === a.professionalId);
-                return service && professional ? sum + (service.price * (professional.commission / 100)) : sum;
+                return service && professional ? sum + (service.preco * (professional.commission / 100)) : sum;
             }, 0);
 
         const grossRevenue = paidReceivablesInMonth.reduce((sum, r) => sum + r.value, 0);
@@ -598,7 +808,7 @@ const KeyIndicatorsView = ({ appointments, professionals, receivables, payables,
                 })
                 .reduce((sum, a) => {
                     const service = services.find(s => s.id === a.serviceId);
-                    return sum + (service?.price || 0);
+                    return sum + (service?.preco || 0);
                 }, 0);
             return { name: prof.name, revenue: therapistRevenue };
         });
@@ -670,7 +880,7 @@ const DREView = ({ receivables, payables, appointments, services, professionals 
                 const service = services.find(s => s.id === a.serviceId);
                 const professional = professionals.find(p => p.id === a.professionalId);
                 if (service && professional) {
-                    return sum + (service.price * (professional.commission / 100));
+                    return sum + (service.preco * (professional.commission / 100));
                 }
                 return sum;
             }, 0);
@@ -773,13 +983,13 @@ const CommissionsView = ({ appointments, services, professionals, clients }) => 
                 const client = clients.find(c => c.id === a.clientId);
                 if (!service || !professional || !client) return null;
 
-                const commissionValue = service.price * (professional.commission / 100);
+                const commissionValue = service.preco * (professional.commission / 100);
                 return {
                     id: a.id,
                     date: new Date(a.date).toLocaleDateString('pt-BR'),
                     clientName: client.nome,
                     serviceName: service.name,
-                    servicePrice: service.price,
+                    servicePrice: service.preco,
                     commissionValue,
                 };
             })
@@ -1251,7 +1461,7 @@ const Agenda = ({ appointments, clients, services }) => {
                                         {dayData.appointments.map(app => (
                                             <div key={app.id} className="bg-indigo-100 text-indigo-800 p-1 rounded-md text-xs">
                                                 <p className="font-semibold truncate">{clients.find(c => c.id === app.clientId)?.nome}</p>
-                                                <p className="truncate">{services.find(s => s.id === app.serviceId)?.name}</p>
+                                                <p className="truncate">{services.find(s => s.id === app.serviceId)?.nome}</p>
                                                 <p>{new Date(app.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                                             </div>
                                         ))}
@@ -1265,41 +1475,6 @@ const Agenda = ({ appointments, clients, services }) => {
         </div>
     );
 };
-
-const Services = ({ services, setServices }) => (
-    <div>
-        <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-800">Serviços</h2>
-            <button className="flex items-center bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition-colors">
-                <PlusCircle className="h-5 w-5 mr-2" />
-                Novo Serviço
-            </button>
-        </div>
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b">
-                    <tr>
-                        <th className="p-4 font-semibold text-gray-600">Nome do Serviço</th>
-                        <th className="p-4 font-semibold text-gray-600">Preço</th>
-                        <th className="p-4 font-semibold text-gray-600">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {services.map(service => (
-                        <tr key={service.id} className="border-b hover:bg-gray-50">
-                            <td className="p-4 font-medium text-gray-800">{service.name}</td>
-                            <td className="p-4 text-gray-600">R$ {service.price.toFixed(2)}</td>
-                            <td className="p-4">
-                                <button className="text-indigo-600 hover:text-indigo-800 mr-2"><Edit size={18} /></button>
-                                <button className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    </div>
-);
 
 const Professionals = ({ professionals, setProfessionals }) => (
     <div>
