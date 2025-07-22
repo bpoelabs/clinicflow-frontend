@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { PlusCircle, Edit, Trash2, LayoutDashboard, Users, ClipboardList, Handshake, Search, Calendar, AlertCircle, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, LayoutDashboard, Users, ClipboardList, Handshake, Search, Calendar, AlertCircle, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // --- DADOS MOCK (APENAS PARA O DASHBOARD, ATÉ O FINANCEIRO SER RECONSTRUÍDO) ---
@@ -12,10 +12,6 @@ const initialPayables = [
     { id: 1, description: 'Aluguel do Espaço (Julho)', value: 2500.00, dueDate: '2025-07-05', status: 'Pago' },
     { id: 2, description: 'Aluguel do Espaço (Junho)', value: 2500.00, dueDate: '2025-06-05', status: 'Pago' },
 ];
-const initialPaymentMethods = [
-    { id: 1, name: 'Crédito (1x)', fee: 2.99 }, { id: 2, name: 'Débito', fee: 1.49 }, { id: 3, name: 'PIX', fee: 0 }, { id: 4, name: 'Dinheiro', fee: 0 },
-];
-
 
 // --- FUNÇÕES UTILITÁRIAS ---
 const maskCPF = v => v.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').substring(0, 14);
@@ -369,3 +365,4 @@ export default function App() {
         </div>
     );
 }
+
