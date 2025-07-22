@@ -247,14 +247,290 @@ const Clients = ({ clients, setClients }) => {
     );
 };
 
-// ... Restante dos componentes (Services, Professionals, Agenda, etc.)
-const Services = () => <div>Serviços</div>;
-const Professionals = () => <div>Profissionais</div>;
-const Agenda = () => <div>Agenda</div>;
+const Services = ({ services, setServices }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const handleDelete = async (serviceId) => {
+        if (!window.confirm('Tem certeza que deseja excluir este serviço?')) return;
+        try {
+            const response = await fetch(`https://clinicflow-backend.onrender.com/api/servicos/${serviceId}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Falha ao excluir o serviço.');
+            setServices(prev => prev.filter(s => s.id !== serviceId));
+        } catch (err) { alert(err.message); }
+    };
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold text-gray-800">Serviços</h2><button onClick={() => setIsModalOpen(true)} className="flex items-center bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700"><PlusCircle className="h-5 w-5 mr-2" />Novo Serviço</button></div>
+            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <table className="w-full text-left">
+                    <thead className="bg-gray-50 border-b"><tr><th className="p-4 font-semibold text-gray-600">Nome do Serviço</th><th className="p-4 font-semibold text-gray-600">Preço</th><th className="p-4 font-semibold text-gray-600">Duração (min)</th><th className="p-4 font-semibold text-gray-600">Ações</th></tr></thead>
+                    <tbody>{(services || []).map(service => (<tr key={service.id} className="border-b hover:bg-gray-50"><td className="p-4 font-medium text-gray-800">{service.nome}</td><td className="p-4 text-gray-600">R$ {parseFloat(service.preco).toFixed(2)}</td><td className="p-4 text-gray-600">{service.duracao_minutos}</td><td className="p-4"><button className="text-indigo-600 hover:text-indigo-800 mr-2"><Edit size={18} /></button><button onClick={() => handleDelete(service.id)} className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button></td></tr>))}</tbody>
+                </table>
+            </div>
+            {isModalOpen && <NewServiceModal closeModal={() => setIsModalOpen(false)} setServices={setServices} />}
+        </div>
+    );
+};
+
+const NewServiceModal = ({ closeModal, setServices }) => {
+    const [formData, setFormData] = useState({ nome: '', preco: '', duracao_minutos: '' });
+    const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('https://clinicflow-backend.onrender.com/api/servicos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, preco: parseFloat(formData.preco), duracao_minutos: parseInt(formData.duracao_minutos) }) });
+            if (!response.ok) throw new Error((await response.json()).mensagem || 'Falha ao criar serviço.');
+            const { servico: novoServico } = await response.json();
+            setServices(prev => [...prev, novoServico].sort((a,b) => a.nome.localeCompare(b.nome)));
+            closeModal();
+        } catch (err) { setError(err.message); } 
+        finally { setIsSubmitting(false); }
+    };
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">Novo Serviço</h3>
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-4"><input type="text" name="nome" value={formData.nome} onChange={handleChange} required placeholder="Nome do Serviço" className="w-full p-2 border rounded-lg" /><input type="number" name="preco" step="0.01" value={formData.preco} onChange={handleChange} required placeholder="Preço (R$)" className="w-full p-2 border rounded-lg" /><input type="number" name="duracao_minutos" value={formData.duracao_minutos} onChange={handleChange} required placeholder="Duração (em minutos)" className="w-full p-2 border rounded-lg" /></div>
+                    {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
+                    <div className="mt-8 flex justify-end space-x-4"><button type="button" onClick={closeModal} disabled={isSubmitting} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">{isSubmitting ? 'Salvando...' : 'Salvar Serviço'}</button></div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const Professionals = ({ professionals, setProfessionals }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingProfessional, setEditingProfessional] = useState(null);
+    const handleDelete = async (id) => {
+        if (!window.confirm('Tem certeza que deseja excluir este profissional?')) return;
+        try {
+            const response = await fetch(`https://clinicflow-backend.onrender.com/api/profissionais/${id}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Falha ao excluir profissional.');
+            setProfessionals(prev => prev.filter(p => p.id !== id));
+        } catch (err) { alert(err.message); }
+    };
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold text-gray-800">Profissionais</h2><button onClick={() => setIsModalOpen(true)} className="flex items-center bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700"><PlusCircle className="h-5 w-5 mr-2" />Novo Profissional</button></div>
+            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <table className="w-full text-left">
+                    <thead className="bg-gray-50 border-b"><tr><th className="p-4 font-semibold text-gray-600">Nome</th><th className="p-4 font-semibold text-gray-600">Comissão (%)</th><th className="p-4 font-semibold text-gray-600">Ações</th></tr></thead>
+                    <tbody>{(professionals || []).map(prof => (<tr key={prof.id} className="border-b hover:bg-gray-50"><td className="p-4 font-medium text-gray-800">{prof.nome}</td><td className="p-4 text-gray-600">{prof.comissao_percentual}%</td><td className="p-4"><button onClick={() => setEditingProfessional(prof)} className="text-indigo-600 hover:text-indigo-800 mr-2"><Edit size={18} /></button><button onClick={() => handleDelete(prof.id)} className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button></td></tr>))}</tbody>
+                </table>
+            </div>
+            {(isModalOpen || editingProfessional) && <ProfessionalFormModal professionalToEdit={editingProfessional} closeModal={() => { setIsModalOpen(false); setEditingProfessional(null); }} setProfessionals={setProfessionals} />}
+        </div>
+    );
+};
+
+const ProfessionalFormModal = ({ closeModal, setProfessionals, professionalToEdit = null }) => {
+    const [formData, setFormData] = useState({ nome: professionalToEdit?.nome || '', comissao_percentual: professionalToEdit?.comissao_percentual || '' });
+    const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const isEditing = !!professionalToEdit;
+    const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        const url = isEditing ? `https://clinicflow-backend.onrender.com/api/profissionais/${professionalToEdit.id}` : 'https://clinicflow-backend.onrender.com/api/profissionais';
+        const method = isEditing ? 'PUT' : 'POST';
+        try {
+            const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, comissao_percentual: parseInt(formData.comissao_percentual) }) });
+            if (!response.ok) throw new Error((await response.json()).mensagem || 'Falha na operação.');
+            const { profissional: resultProf } = await response.json();
+            if (isEditing) { setProfessionals(prev => prev.map(p => p.id === resultProf.id ? resultProf : p)); } 
+            else { setProfessionals(prev => [...prev, resultProf].sort((a,b) => a.nome.localeCompare(b.nome))); }
+            closeModal();
+        } catch (err) { setError(err.message); } 
+        finally { setIsSubmitting(false); }
+    };
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">{isEditing ? 'Editar Profissional' : 'Novo Profissional'}</h3>
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-4"><input type="text" name="nome" value={formData.nome} onChange={handleChange} required placeholder="Nome do Profissional" className="w-full p-2 border rounded-lg" /><input type="number" name="comissao_percentual" value={formData.comissao_percentual} onChange={handleChange} required placeholder="Comissão (%)" className="w-full p-2 border rounded-lg" /></div>
+                    {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
+                    <div className="mt-8 flex justify-end space-x-4"><button type="button" onClick={closeModal} disabled={isSubmitting} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">{isSubmitting ? 'Salvando...' : 'Salvar'}</button></div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const Agenda = ({ appointments, setAppointments, clients, services, professionals }) => {
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [modalState, setModalState] = useState({ isOpen: false, date: null, appointment: null });
+
+    const changeMonth = (offset) => setCurrentDate(prev => { const newDate = new Date(prev); newDate.setMonth(newDate.getMonth() + offset); return newDate; });
+    
+    const handleDayClick = (date) => setModalState({ isOpen: true, date, appointment: null });
+    const handleAppointmentClick = (appointment, e) => {
+        e.stopPropagation();
+        setModalState({ isOpen: true, date: null, appointment });
+    };
+    const closeModal = () => setModalState({ isOpen: false, date: null, appointment: null });
+
+    const calendarGrid = useMemo(() => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const grid = [];
+        let day = 1;
+        for (let i = 0; i < 6; i++) {
+            const week = [];
+            for (let j = 0; j < 7; j++) {
+                if ((i === 0 && j < firstDayOfMonth) || day > daysInMonth) { week.push(null); } 
+                else {
+                    const dayAppointments = (appointments || []).filter(app => { const appDate = new Date(app.data_hora_inicio); return appDate.getDate() === day && appDate.getMonth() === month && appDate.getFullYear() === year; });
+                    week.push({ day, date: new Date(year, month, day), appointments: dayAppointments });
+                    day++;
+                }
+            }
+            grid.push(week);
+            if (day > daysInMonth) break;
+        }
+        return grid;
+    }, [currentDate, appointments]);
+
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-gray-800">Agenda</h2>
+                <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2"><button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-200"><ChevronLeft /></button><span className="text-xl font-semibold text-gray-700 w-48 text-center capitalize">{currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</span><button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-200"><ChevronRight /></button></div>
+                    <button onClick={() => handleDayClick(new Date())} className="flex items-center bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700"><PlusCircle className="h-5 w-5 mr-2" />Novo Agendamento</button>
+                </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-md">
+                <div className="grid grid-cols-7 text-center font-semibold text-gray-600 border-b">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => <div key={day} className="p-4">{day}</div>)}</div>
+                <div className="grid grid-cols-7" style={{ minHeight: '60vh' }}>{calendarGrid.flat().map((dayData, index) => (<div key={index} className="border-r border-b p-2 overflow-y-auto cursor-pointer hover:bg-gray-50" onClick={() => dayData && handleDayClick(dayData.date)}>{dayData && (<><span className="font-bold">{dayData.day}</span><div className="mt-1 space-y-1">{dayData.appointments.map(app => (<div key={app.id} onClick={(e) => handleAppointmentClick(app, e)} className="bg-indigo-100 text-indigo-800 p-1 rounded-md text-xs cursor-pointer hover:bg-indigo-200"><p className="font-semibold truncate">{(services || []).find(s => s.id === app.id_servico)?.nome}</p><p>{new Date(app.data_hora_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p><p className="truncate">{(app.participantes || []).map(p => p.nome).join(', ')}</p></div>))}</div></>)}</div>))}</div>
+            </div>
+            {modalState.isOpen && <AppointmentFormModal 
+                closeModal={closeModal} 
+                setAppointments={setAppointments} 
+                clients={clients} 
+                services={services} 
+                professionals={professionals} 
+                appointmentToEdit={modalState.appointment}
+                selectedDate={modalState.date}
+            />}
+        </div>
+    );
+};
+
+const AppointmentFormModal = ({ closeModal, setAppointments, clients, services, professionals, appointmentToEdit = null, selectedDate = null }) => {
+    const [formData, setFormData] = useState({
+        id_servico: appointmentToEdit?.id_servico || '',
+        id_profissional: appointmentToEdit?.id_profissional || '',
+        data: appointmentToEdit ? new Date(appointmentToEdit.data_hora_inicio).toISOString().split('T')[0] : new Date(selectedDate || Date.now()).toISOString().split('T')[0],
+        hora: appointmentToEdit ? new Date(appointmentToEdit.data_hora_inicio).toTimeString().substring(0,5) : '09:00',
+        participantes: appointmentToEdit?.participantes.map(p => p.id) || [],
+    });
+    const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const isEditing = !!appointmentToEdit;
+
+    const selectedService = services.find(s => s.id === parseInt(formData.id_servico));
+    const capacity = selectedService?.capacidade || 1;
+
+    const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    
+    const handleParticipantChange = (e) => {
+        const selectedOptions = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+        if (selectedOptions.length <= capacity) {
+            setFormData(prev => ({ ...prev, participantes: selectedOptions }));
+        } else {
+            alert(`Este serviço tem capacidade para apenas ${capacity} participante(s).`);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        const [hours, minutes] = formData.hora.split(':');
+        const startDate = new Date(formData.data);
+        startDate.setUTCHours(hours, minutes);
+
+        const serviceDuration = selectedService?.duracao_minutos || 60;
+        const endDate = new Date(startDate.getTime() + serviceDuration * 60000);
+
+        const payload = {
+            id_servico: parseInt(formData.id_servico),
+            id_profissional: parseInt(formData.id_profissional),
+            data_hora_inicio: startDate.toISOString(),
+            data_hora_fim: endDate.toISOString(),
+            status: 'Agendado',
+            participantes: formData.participantes,
+        };
+
+        const url = isEditing ? `https://clinicflow-backend.onrender.com/api/agendamentos/${appointmentToEdit.id}` : 'https://clinicflow-backend.onrender.com/api/agendamentos';
+        const method = isEditing ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error((await response.json()).mensagem || 'Falha na operação.');
+            const { agendamento: resultAppointment } = await response.json();
+            
+            if (isEditing) {
+                setAppointments(prev => prev.map(a => a.id === resultAppointment.id ? resultAppointment : a));
+            } else {
+                setAppointments(prev => [...prev, resultAppointment]);
+            }
+            closeModal();
+        } catch (err) { setError(err.message); } 
+        finally { setIsSubmitting(false); }
+    };
+
+    const handleDelete = async () => {
+        if (!window.confirm('Tem certeza que deseja excluir este agendamento?')) return;
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`https://clinicflow-backend.onrender.com/api/agendamentos/${appointmentToEdit.id}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Falha ao excluir agendamento.');
+            setAppointments(prev => prev.filter(a => a.id !== appointmentToEdit.id));
+            closeModal();
+        } catch (err) { setError(err.message); }
+        finally { setIsSubmitting(false); }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">{isEditing ? 'Editar' : 'Novo'} Agendamento</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <select name="id_servico" value={formData.id_servico} onChange={handleChange} className="w-full p-2 border rounded-lg"><option value="">Selecione o Serviço</option>{(services || []).map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}</select>
+                        <select name="id_profissional" value={formData.id_profissional} onChange={handleChange} className="w-full p-2 border rounded-lg"><option value="">Selecione o Profissional</option>{(professionals || []).map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select>
+                        <input type="date" name="data" value={formData.data} onChange={handleChange} className="w-full p-2 border rounded-lg" />
+                        <input type="time" name="hora" value={formData.hora} onChange={handleChange} className="w-full p-2 border rounded-lg" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Participantes (Vagas: {formData.participantes.length}/{capacity})</label>
+                        <select multiple value={formData.participantes} onChange={handleParticipantChange} className="w-full p-2 border rounded-lg h-32">
+                            {(clients || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                        </select>
+                    </div>
+                    {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
+                    <div className="mt-8 flex justify-between">
+                        <div>{isEditing && <button type="button" onClick={handleDelete} disabled={isSubmitting} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Excluir</button>}</div>
+                        <div className="space-x-4"><button type="button" onClick={closeModal} disabled={isSubmitting} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">{isSubmitting ? 'Salvando...' : 'Salvar'}</button></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 
 // --- COMPONENTE PRINCIPAL ---
 export default function App() {
-    const [currentPage, setCurrentPage] = useState('Clientes');
+    const [currentPage, setCurrentPage] = useState('Agenda');
     
     const [clients, setClients] = useState([]); 
     const [services, setServices] = useState([]);
@@ -291,7 +567,7 @@ export default function App() {
             case 'Serviços': return <Services services={services} setServices={setServices} />;
             case 'Profissionais': return <Professionals professionals={professionals} setProfessionals={setProfessionals} />;
             case 'Agenda': return <Agenda appointments={appointments} setAppointments={setAppointments} clients={clients} services={services} professionals={professionals} />;
-            default: return <Clients clients={clients} setClients={setClients} />;
+            default: return <Dashboard clients={clients} receivables={receivables} payables={payables} />;
         }
     };
 
@@ -302,5 +578,6 @@ export default function App() {
         </div>
     );
 }
+
 
 
